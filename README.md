@@ -18,7 +18,18 @@ Pour brancher votre Jenkins : **Paramètres** → *Jenkins* → URL, utilisateur
 *Tester la connexion*. Si Jenkins refuse les appels du navigateur (CORS) :
 
 ```bash
+# Linux / macOS
 JENKINS_URL=https://jenkins.mon-entreprise.fr npm start
+```
+
+```powershell
+# Windows PowerShell
+$env:JENKINS_URL="https://jenkins.mon-entreprise.fr"; npm start
+```
+
+```bat
+:: Windows cmd.exe (pas d'espace avant &&)
+set JENKINS_URL=https://jenkins.mon-entreprise.fr&& npm start
 ```
 
 puis cochez *Passer par le proxy de développement*.
