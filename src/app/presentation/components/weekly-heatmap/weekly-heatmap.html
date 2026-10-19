@@ -1,0 +1,26 @@
+<div class="grid">
+  <span></span>
+  @for (hour of hours; track hour) {
+    <span class="hour-label">{{ hour % 3 === 0 ? hour + 'h' : '' }}</span>
+  }
+
+  @for (row of heatmap(); track $index) {
+    <span class="day-label">{{ weekdays[$index] }}</span>
+    @for (cell of row; track cell.hour) {
+      <span
+        class="cell"
+        [class.empty]="cell.averageLoad === null"
+        [class.free]="cell.averageLoad === 0"
+        [class.highlight]="isHighlighted(cell)"
+        [style.--intensity]="intensity(cell)"
+        [title]="describe(cell)"
+      ></span>
+    }
+  }
+</div>
+
+<div class="legend">
+  <span class="swatch free"></span> Aucune activité
+  <span class="scale"></span> Charge croissante
+  <span class="swatch highlight"></span> Maintenance suggérée
+</div>

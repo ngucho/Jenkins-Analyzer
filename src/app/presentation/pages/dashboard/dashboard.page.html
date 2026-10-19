@@ -1,0 +1,138 @@
+<header class="page-header">
+  <div>
+    <h1>Charge de travail</h1>
+    <p class="subtitle">
+      {{ viewLabel() }}
+      @if (fetchedLabel()) {
+        <span class="dot">·</span> {{ fetchedLabel() }}
+      }
+    </p>
+  </div>
+
+  <div class="toolbar">
+    <div class="segmented" role="radiogroup" aria-label="Période analysée">
+      @for (period of periods; track period.id) {
+        <button
+          type="button"
+          role="radio"
+          [attr.aria-checked]="store.period() === period.id"
+          [class.active]="store.period() === period.id"
+          (click)="store.selectPeriod(period.id)"
+        >
+          {{ period.label }}
+        </button>
+      }
+    </div>
+
+    <div class="search">
+      <input
+        type="search"
+        placeholder="Filtrer les jobs…"
+        aria-label="Filtrer les jobs"
+        [value]="store.jobFilter()"
+        (input)="onSearch($event)"
+      />
+    </div>
+
+    <button type="button" class="button" (click)="store.load()" [disabled]="store.loading()">
+      {{ store.loading() ? 'Chargement…' : 'Actualiser' }}
+    </button>
+  </div>
+</header>
+
+@if (store.loading()) {
+  <div class="progress" aria-hidden="true">
+    <span [style.width.%]="(store.progress() ?? 0.08) * 100"></span>
+  </div>
+}
+
+@if (store.error(); as error) {
+  <div class="alert error">
+    <strong>Impossible de charger les données.</strong> {{ error }}
+    <a routerLink="/settings">Vérifier les paramètres</a>
+  </div>
+}
+
+@for (warning of warnings(); track warning) {
+  <div class="alert warning">{{ warning }}</div>
+}
+
+@if (store.analysis(); as analysis) {
+  <app-kpi-strip [summary]="analysis.summary" [capacity]="store.capacity()" />
+
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2>Chronologie</h2>
+        <p class="card-hint">Glissez sur le graphique pour zoomer · cliquez sur un build pour l’ouvrir dans Jenkins</p>
+      </div>
+      @if (store.zoom()) {
+        <button type="button" class="chip" (click)="store.resetZoom()">Zoom actif · Réinitialiser ✕</button>
+      }
+    </header>
+
+    <app-load-timeline
+      [window]="store.viewWindow()!"
+      [series]="store.loadSeries()"
+      [builds]="store.visibleBuilds()"
+      [idleSlots]="analysis.idleSlots"
+      [capacity]="store.capacity()"
+      (zoomRequest)="store.zoomTo($event)"
+    />
+
+    <ul class="legend">
+      <li><span class="swatch load"></span>Builds simultanés (moyenne)</li>
+      @if (store.capacity() > 0) {
+        <li><span class="swatch capacity"></span>Capacité : {{ store.capacity() }} exécuteurs</li>
+      }
+      <li><span class="swatch idle"></span>Plage creuse ≥ {{ settings().idleThresholdMinutes }} min</li>
+      <li><span class="swatch result-success"></span>Succès</li>
+      <li><span class="swatch result-failure"></span>Échec</li>
+      <li><span class="swatch result-unstable"></span>Instable</li>
+      <li><span class="swatch result-aborted"></span>Annulé</li>
+      <li><span class="swatch result-running"></span>En cours</li>
+    </ul>
+  </section>
+
+  <div class="columns">
+    <section class="card">
+      <header class="card-header">
+        <div>
+          <h2>Semaine type</h2>
+          <p class="card-hint">Charge moyenne par jour et par heure, sur toute la période chargée</p>
+        </div>
+      </header>
+      @if (store.heatmap(); as heatmap) {
+        <app-weekly-heatmap [heatmap]="heatmap" [highlights]="store.maintenanceWindows().slice(0, 1)" />
+      }
+
+      <h3 class="subheading">Créneaux de maintenance de {{ settings().maintenanceDurationHours }} h les plus calmes</h3>
+      <app-maintenance-windows [windows]="store.maintenanceWindows()" />
+    </section>
+
+    <section class="card">
+      <header class="card-header">
+        <div>
+          <h2>Plages creuses</h2>
+          <p class="card-hint">Plus longues périodes sans aucun build · cliquez pour zoomer</p>
+        </div>
+      </header>
+      <app-idle-slots [slots]="analysis.idleSlots" (select)="store.zoomTo($event)" />
+    </section>
+  </div>
+
+  <section class="card flush">
+    <header class="card-header padded">
+      <div>
+        <h2>Jobs</h2>
+        <p class="card-hint">Triés par temps machine consommé · cliquez sur un job pour filtrer</p>
+      </div>
+    </header>
+    <app-jobs-table [stats]="analysis.jobStats" (jobSelected)="store.jobFilter.set($event)" />
+  </section>
+} @else if (!store.error()) {
+  <div class="placeholder">
+    <div class="skeleton kpis"></div>
+    <div class="skeleton chart"></div>
+  </div>
+}

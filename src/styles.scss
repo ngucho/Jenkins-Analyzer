@@ -1,0 +1,211 @@
+/* Design tokens — clair par défaut, sombre selon le système. */
+:root {
+  color-scheme: light dark;
+
+  --bg: #f7f7f8;
+  --surface: #ffffff;
+  --surface-hover: #f2f2f4;
+  --border: #e8e8ec;
+  --border-strong: #d4d4da;
+  --text: #18181b;
+  --text-muted: #71717a;
+  --accent: #4f46e5;
+  --accent-soft: rgb(79 70 229 / 0.12);
+  --idle: #059669;
+  --idle-soft: rgb(16 185 129 / 0.13);
+  --danger: #dc2626;
+  --warning: #d97706;
+  --tooltip-bg: #18181b;
+  --tooltip-text: #fafafa;
+  --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.12);
+  --radius: 12px;
+
+  --result-success: #6366f1;
+  --result-failure: #ef4444;
+  --result-unstable: #f59e0b;
+  --result-aborted: #a1a1aa;
+  --result-running: #a5b4fc;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #0c0c0e;
+    --surface: #151518;
+    --surface-hover: #1e1e22;
+    --border: #26262b;
+    --border-strong: #3a3a41;
+    --text: #f4f4f5;
+    --text-muted: #a1a1aa;
+    --accent: #818cf8;
+    --accent-soft: rgb(129 140 248 / 0.16);
+    --idle: #34d399;
+    --idle-soft: rgb(52 211 153 / 0.13);
+    --danger: #f87171;
+    --warning: #fbbf24;
+    --tooltip-bg: #f4f4f5;
+    --tooltip-text: #18181b;
+    --shadow-lg: 0 8px 24px rgb(0 0 0 / 0.5);
+    --result-success: #818cf8;
+    --result-running: #4338ca;
+  }
+}
+
+/* Couleur d'un build selon son résultat (timeline, légendes). */
+.result-success { --result-color: var(--result-success); }
+.result-failure { --result-color: var(--result-failure); }
+.result-unstable { --result-color: var(--result-unstable); }
+.result-aborted,
+.result-not-built,
+.result-unknown { --result-color: var(--result-aborted); }
+.result-running { --result-color: var(--result-running); }
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ---- Briques partagées ---- */
+
+.card {
+  padding: 20px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  min-width: 0;
+
+  &.flush {
+    padding: 0;
+    overflow: hidden;
+  }
+}
+
+.card-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+
+  &.padded {
+    padding: 20px 20px 0;
+    margin-bottom: 8px;
+  }
+
+  h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 600;
+  }
+}
+
+.card-hint {
+  margin: 2px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+input[type='text'],
+input[type='url'],
+input[type='password'],
+input[type='search'],
+input[type='number'] {
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+
+  &:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
+  }
+
+  &.ng-invalid.ng-touched {
+    border-color: var(--danger);
+  }
+}
+
+input[type='number'] {
+  width: 90px;
+}
+
+.button {
+  height: 34px;
+  padding: 0 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+
+  &:hover:not(:disabled) {
+    background: var(--surface-hover);
+  }
+
+  &:disabled {
+    opacity: 0.6;
+    cursor: default;
+  }
+
+  &.primary {
+    border-color: var(--accent);
+    background: var(--accent);
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      background: color-mix(in srgb, var(--accent) 88%, #000);
+    }
+  }
+}
+
+.segmented {
+  display: inline-flex;
+  align-self: flex-start;
+  padding: 3px;
+  gap: 2px;
+  border-radius: 9px;
+  background: var(--surface-hover);
+  border: 1px solid var(--border);
+
+  > button,
+  > label {
+    height: 28px;
+    padding: 0 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--text-muted);
+    font: inherit;
+    font-size: 13px;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &.active {
+      background: var(--surface);
+      color: var(--text);
+      font-weight: 500;
+      box-shadow: 0 1px 2px rgb(0 0 0 / 0.08);
+    }
+  }
+}

@@ -1,0 +1,105 @@
+<header class="page-header">
+  <h1>Paramètres</h1>
+  <p class="subtitle">Connexion à Jenkins et réglages de l’analyse. Tout reste stocké localement dans ce navigateur.</p>
+</header>
+
+<form [formGroup]="form" (ngSubmit)="save()" class="card">
+  <section>
+    <h2>Source de données</h2>
+    <div class="segmented" role="radiogroup">
+      <label [class.active]="isJenkins()">
+        <input type="radio" formControlName="dataSource" value="jenkins" /> Jenkins
+      </label>
+      <label [class.active]="!isJenkins()">
+        <input type="radio" formControlName="dataSource" value="demo" /> Démo
+      </label>
+    </div>
+    @if (!isJenkins()) {
+      <p class="help">Des données fictives mais réalistes, pour découvrir l’outil sans Jenkins.</p>
+    }
+  </section>
+
+  @if (isJenkins()) {
+    <section>
+      <h2>Connexion</h2>
+
+      <label class="field">
+        <span>URL de Jenkins</span>
+        <input type="url" formControlName="baseUrl" placeholder="https://jenkins.mon-entreprise.fr" autocomplete="url" />
+        @if (form.controls.baseUrl.touched && form.controls.baseUrl.invalid) {
+          <small class="error">Saisissez une URL complète, commençant par http:// ou https://</small>
+        }
+      </label>
+
+      <div class="row">
+        <label class="field">
+          <span>Utilisateur</span>
+          <input type="text" formControlName="username" autocomplete="username" />
+          @if (form.controls.username.touched && form.controls.username.invalid) {
+            <small class="error">Requis</small>
+          }
+        </label>
+
+        <label class="field">
+          <span>Token API</span>
+          <div class="with-action">
+            <input [type]="showToken() ? 'text' : 'password'" formControlName="apiToken" autocomplete="off" />
+            <button type="button" class="ghost" (click)="showToken.set(!showToken())">
+              {{ showToken() ? 'Masquer' : 'Afficher' }}
+            </button>
+          </div>
+          @if (form.controls.apiToken.touched && form.controls.apiToken.invalid) {
+            <small class="error">Requis</small>
+          }
+        </label>
+      </div>
+      <p class="help">
+        Générez un token dans Jenkins : <em>votre profil › Security › API Token › Add new token</em>.
+        Un compte en lecture seule suffit.
+      </p>
+
+      <label class="checkbox">
+        <input type="checkbox" formControlName="useDevProxy" />
+        <span>
+          Passer par le proxy de développement
+          <small>
+            À cocher si Jenkins refuse les appels du navigateur (CORS). Lancez alors l’application avec
+            <code>JENKINS_URL=https://… npm start</code>.
+          </small>
+        </span>
+      </label>
+    </section>
+  }
+
+  <section>
+    <h2>Analyse</h2>
+    <div class="row three">
+      <label class="field">
+        <span>Plage creuse à partir de</span>
+        <div class="with-unit"><input type="number" formControlName="idleThresholdMinutes" min="1" /> min</div>
+      </label>
+      <label class="field">
+        <span>Durée de maintenance</span>
+        <div class="with-unit"><input type="number" formControlName="maintenanceDurationHours" min="1" max="24" /> h</div>
+      </label>
+      <label class="field">
+        <span>Builds max. par job</span>
+        <div class="with-unit"><input type="number" formControlName="maxBuildsPerJob" min="10" max="5000" /> builds</div>
+      </label>
+    </div>
+    <p class="help">Plus la limite de builds est haute, plus l’historique est complet — et plus les requêtes sont lourdes.</p>
+  </section>
+
+  @if (testMessage(); as message) {
+    <div class="status" [class.success]="test().status === 'success'" [class.error]="test().status === 'error'">
+      {{ message }}
+    </div>
+  }
+
+  <footer>
+    <button type="button" class="button" (click)="testConnection()" [disabled]="test().status === 'testing'">
+      {{ test().status === 'testing' ? 'Test en cours…' : 'Tester la connexion' }}
+    </button>
+    <button type="submit" class="button primary">Enregistrer et analyser</button>
+  </footer>
+</form>

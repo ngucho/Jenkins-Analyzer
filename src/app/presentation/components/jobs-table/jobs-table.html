@@ -1,0 +1,51 @@
+<div class="scroll">
+  <table>
+    <thead>
+      <tr>
+        @for (column of columns; track column.key) {
+          <th
+            [class.numeric]="column.numeric"
+            [attr.aria-sort]="sortKey() === column.key ? (descending() ? 'descending' : 'ascending') : null"
+          >
+            <button type="button" (click)="sortBy(column.key)">
+              {{ column.label }}
+              @if (sortKey() === column.key) {
+                <span class="arrow">{{ descending() ? '↓' : '↑' }}</span>
+              }
+            </button>
+          </th>
+        }
+      </tr>
+    </thead>
+    <tbody>
+      @for (row of rows(); track row.jobName) {
+        <tr>
+          <td class="job">
+            <button type="button" (click)="jobSelected.emit(row.jobName)" title="Filtrer sur ce job">
+              {{ row.jobName }}
+            </button>
+          </td>
+          <td class="numeric">{{ row.runs }}</td>
+          <td class="numeric">{{ row.averageDuration | duration }}</td>
+          <td class="numeric">{{ row.maxDuration | duration }}</td>
+          <td class="numeric">
+            <span class="total">
+              {{ row.totalDuration | duration }}
+              <span class="share" [title]="(row.shareOfBuildTime | ratio) + ' du temps machine'">
+                <span [style.width.%]="row.shareOfBuildTime * 100"></span>
+              </span>
+            </span>
+          </td>
+          <td class="numeric" [class.low]="row.successRate !== null && row.successRate < 0.8">
+            {{ row.successRate | ratio }}
+          </td>
+          <td class="numeric muted">{{ row.lastStart | dateTime }}</td>
+        </tr>
+      } @empty {
+        <tr>
+          <td class="empty" [attr.colspan]="columns.length">Aucun build sur cette période.</td>
+        </tr>
+      }
+    </tbody>
+  </table>
+</div>
