@@ -92,7 +92,7 @@ algorithme, ajoutez d'abord le cas qui vous inquiète.
 Pour vérifier le chemin HTTP sans vrai Jenkins, un petit serveur Node suffit : il répond à
 `/api/json`, `/computer/api/json` et `/job/<nom>/api/json` avec du JSON de la forme décrite dans
 `jenkins-api.types.ts`, et renvoie 401 si l'en-tête `Authorization` est faux. Lancez-le sur le
-port 8080, puis `JENKINS_URL=http://localhost:8080 npm start` avec le proxy coché.
+port 8080, puis `JENKINS_URL=http://localhost:8080` dans `.env` (c'est aussi la valeur par défaut du proxy) et le proxy coché dans les paramètres.
 
 ## Avant de pousser
 

@@ -41,3 +41,7 @@ __screenshots__/
 # System files
 .DS_Store
 Thumbs.db
+
+# Configuration locale (URL de Jenkins du proxy de dev) — ne jamais versionner
+.env
+.env.local

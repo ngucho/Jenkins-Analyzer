@@ -62,21 +62,20 @@ Trois solutions :
 ### 1. Proxy de développement (local)
 
 ```bash
-# Linux / macOS
-JENKINS_URL=https://jenkins.mon-entreprise.fr npm start
+cp .env.example .env        # Windows : copy .env.example .env
 ```
 
-```powershell
-# Windows PowerShell
-$env:JENKINS_URL="https://jenkins.mon-entreprise.fr"; npm start
+Éditez ensuite `.env` :
+
+```ini
+JENKINS_URL=https://jenkins.mon-entreprise.fr
+# JENKINS_INSECURE=true     # certificat auto-signé ou d'autorité interne
 ```
 
-```bat
-:: Windows cmd.exe (pas d'espace avant &&)
-set JENKINS_URL=https://jenkins.mon-entreprise.fr&& npm start
-```
+Relancez `npm start` : le terminal affiche `[jenkins-proxy] /jenkins-proxy/* -> <votre URL>`.
+Le fichier `.env` est ignoré par Git (il reste sur votre poste).
 
-`proxy.conf.mjs` relaie `/jenkins-proxy/*` vers `JENKINS_URL`. Cochez *Passer par le proxy de
+`proxy.conf.mjs` relaie `/jenkins-proxy/*` vers le `JENKINS_URL` défini dans `.env`. Cochez *Passer par le proxy de
 développement* dans les paramètres.
 
 ### 2. Reverse proxy en production (recommandé)

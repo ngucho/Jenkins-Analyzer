@@ -47,26 +47,21 @@ jobs nocturnes, week-ends calmes). Vous pouvez tout explorer sans Jenkins.
 C'est presque toujours **CORS** : le navigateur refuse d'appeler un autre domaine que celui de
 l'application si Jenkins ne l'autorise pas explicitement. Solution en développement :
 
-Arrêtez `npm start`, puis relancez-le avec la variable `JENKINS_URL` :
+Le proxy lit l'adresse de Jenkins dans un fichier `.env` (identique sur Windows, macOS et Linux) :
 
 ```bash
-# Linux / macOS
-JENKINS_URL=https://jenkins.mon-entreprise.fr npm start
+cp .env.example .env        # Windows : copy .env.example .env
 ```
 
-```powershell
-# Windows PowerShell
-$env:JENKINS_URL="https://jenkins.mon-entreprise.fr"; npm start
+Éditez ensuite `.env` :
+
+```ini
+JENKINS_URL=https://jenkins.mon-entreprise.fr
+# JENKINS_INSECURE=true     # certificat auto-signé ou d'autorité interne
 ```
 
-```bat
-:: Windows cmd.exe (pas d'espace avant &&)
-set JENKINS_URL=https://jenkins.mon-entreprise.fr&& npm start
-```
-
-> La syntaxe `VARIABLE=valeur npm start` ne fonctionne **pas** sous Windows : la variable n'est
-> pas définie et le proxy vise `localhost:8080` (erreur `ECONNREFUSED`). Au démarrage, le terminal
-> affiche `[jenkins-proxy] /jenkins-proxy/* -> <cible>` : vérifiez que la cible est bien votre Jenkins.
+Relancez `npm start` : le terminal affiche `[jenkins-proxy] /jenkins-proxy/* -> <votre URL>`.
+Le fichier `.env` est ignoré par Git (il reste sur votre poste).
 
 Cochez ensuite **Passer par le proxy de développement** dans les paramètres. Les appels passent
 alors par le serveur de dev Angular (même origine), qui les relaie vers Jenkins.
@@ -134,5 +129,5 @@ Pour aller plus loin, voir le [guide de développement](./development.md).
 | « Ressource introuvable » | URL incorrecte | Utilisez l'URL racine de Jenkins, sans `/job/...` |
 | « La réponse n'est pas du JSON » | L'URL pointe vers une page de login SSO ou un autre site | Vérifiez l'URL ; avec un SSO, passez par le proxy |
 | Bandeau « Historique incomplet » | Plus de builds que la limite par job sur la période | Augmentez *Builds max. par job* dans les paramètres |
-| `http proxy error … ECONNREFUSED` dans le terminal | Proxy coché mais `JENKINS_URL` non défini : le proxy vise `localhost:8080` | Définissez `JENKINS_URL` avant `npm start` (au démarrage, le terminal affiche `[jenkins-proxy] … -> <cible>` : vérifiez-la). Sous Windows, la syntaxe `VAR=valeur npm start` ne fonctionne pas, voir ci-dessus |
+| `http proxy error … ECONNREFUSED` dans le terminal | Proxy coché mais `JENKINS_URL` non défini : le proxy vise `localhost:8080` | Créez le fichier `.env` (copie de `.env.example`) avec `JENKINS_URL=...`, puis relancez `npm start` (le démarrage affiche `[jenkins-proxy] … -> <cible>` : vérifiez-la). Un changement de `.env` n'est pris en compte qu'après redémarrage |
 | Chargement très long | Beaucoup de jobs | Réduisez la période ou la limite de builds par job |
