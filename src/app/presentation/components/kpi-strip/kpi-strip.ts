@@ -1,33 +1,20 @@
 import { ChangeDetectionStrategy, Component, computed, input } from '@angular/core';
 import { WorkloadSummary } from '@domain/analytics/workload-analysis';
+import { Stat, StatGrid } from '../stat-grid/stat-grid';
 import { formatDuration, formatPercent, formatRange, formatShortDate } from '../../shared/format';
-
-interface Kpi {
-  readonly label: string;
-  readonly value: string;
-  readonly hint: string;
-  readonly tone?: 'idle' | 'warn';
-}
 
 @Component({
   selector: 'app-kpi-strip',
-  template: `
-    @for (kpi of kpis(); track kpi.label) {
-      <div class="kpi" [attr.data-tone]="kpi.tone">
-        <span class="label">{{ kpi.label }}</span>
-        <span class="value">{{ kpi.value }}</span>
-        <span class="hint">{{ kpi.hint }}</span>
-      </div>
-    }
-  `,
-  styleUrl: './kpi-strip.scss',
+  imports: [StatGrid],
+  template: `<app-stat-grid [stats]="kpis()" />`,
+  styles: ':host { display: block; }',
   changeDetection: ChangeDetectionStrategy.OnPush,
 })
 export class KpiStrip {
   readonly summary = input.required<WorkloadSummary>();
   readonly capacity = input(0);
 
-  protected readonly kpis = computed<Kpi[]>(() => {
+  protected readonly kpis = computed<Stat[]>(() => {
     const s = this.summary();
     const longest = s.longestIdleSlot;
     return [

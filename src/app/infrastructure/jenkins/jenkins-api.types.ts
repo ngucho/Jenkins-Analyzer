@@ -12,6 +12,12 @@ export interface JobListDto {
   readonly jobs?: readonly JobItemDto[];
 }
 
+/** Les actions d'un build ; seule `CauseAction` porte des causes. */
+export interface BuildActionDto {
+  readonly _class?: string;
+  readonly causes?: readonly { readonly _class: string }[];
+}
+
 export interface BuildDto {
   readonly number: number;
   readonly timestamp: number;
@@ -21,6 +27,7 @@ export interface BuildDto {
   readonly building: boolean;
   readonly builtOn?: string;
   readonly url: string;
+  readonly actions?: readonly BuildActionDto[];
 }
 
 export interface JobBuildsDto {

@@ -1,6 +1,16 @@
 import { HttpClient, HttpErrorResponse, HttpHeaders, HttpParams } from '@angular/common/http';
 import { inject, Injectable } from '@angular/core';
-import { Observable, retry, throwError, timeout, timer, TimeoutError, catchError, map } from 'rxjs';
+import {
+  catchError,
+  map,
+  MonoTypeOperatorFunction,
+  Observable,
+  retry,
+  throwError,
+  timeout,
+  TimeoutError,
+  timer,
+} from 'rxjs';
 import { JenkinsError } from '@domain/jenkins-error';
 import { JenkinsSettings } from '@domain/jenkins-settings';
 import { SECOND } from '@domain/time-window';
@@ -29,13 +39,12 @@ export class JenkinsHttpClient {
     const params = tree ? new HttpParams().set('tree', tree) : undefined;
     return this.http
       .get<T>(`${baseUrlOf(settings)}/${path}api/json`, {
-        headers: authHeaders(settings),
+        headers: authHeaders(settings, 'application/json'),
         params,
         observe: 'response',
       })
       .pipe(
-        timeout(REQUEST_TIMEOUT),
-        retry({ count: MAX_RETRIES, delay: retryDelay }),
+        resilient(),
         map((response) => {
           if (response.body === null) {
             throw new JenkinsError('invalid-response', 'Réponse vide de Jenkins.');
@@ -45,15 +54,34 @@ export class JenkinsHttpClient {
         catchError((error: unknown) => throwError(() => toJenkinsError(error))),
       );
   }
+
+  /** Lit un fichier texte de Jenkins (ex. `job/x/config.xml`). */
+  getText(settings: JenkinsSettings, path: string): Observable<string> {
+    return this.http
+      .get(`${baseUrlOf(settings)}/${path}`, {
+        headers: authHeaders(settings, 'application/xml, text/plain'),
+        responseType: 'text',
+      })
+      .pipe(
+        resilient(),
+        catchError((error: unknown) => throwError(() => toJenkinsError(error))),
+      );
+  }
+}
+
+/** Timeout et nouvelles tentatives sur erreur passagère, communs à toutes les requêtes. */
+function resilient<T>(): MonoTypeOperatorFunction<T> {
+  return (source) =>
+    source.pipe(timeout(REQUEST_TIMEOUT), retry({ count: MAX_RETRIES, delay: retryDelay }));
 }
 
 function baseUrlOf(settings: JenkinsSettings): string {
   return settings.useDevProxy ? DEV_PROXY_PREFIX : settings.baseUrl.trim().replace(/\/+$/, '');
 }
 
-function authHeaders(settings: JenkinsSettings): HttpHeaders {
+function authHeaders(settings: JenkinsSettings, accept: string): HttpHeaders {
   const credentials = btoa(`${settings.username.trim()}:${settings.apiToken.trim()}`);
-  return new HttpHeaders({ Authorization: `Basic ${credentials}`, Accept: 'application/json' });
+  return new HttpHeaders({ Authorization: `Basic ${credentials}`, Accept: accept });
 }
 
 function retryDelay(error: unknown, attempt: number): Observable<number> {

@@ -1,0 +1,126 @@
+<header class="page-header">
+  <div>
+    <h1>Optimisation des planifications</h1>
+    <p class="subtitle">
+      Propose de décaler les jobs planifiés pour étaler la charge sur la semaine et éviter les pics.
+      Rien n’est modifié dans Jenkins : vous appliquez vous-même les changements retenus.
+    </p>
+  </div>
+  <div class="toolbar">
+    <span>Décalage maximal</span>
+    <div class="segmented" role="radiogroup" aria-label="Décalage maximal">
+      @for (hours of shiftOptions; track hours) {
+        <button type="button" role="radio" [attr.aria-checked]="store.maxShiftHours() === hours" [class.active]="store.maxShiftHours() === hours" (click)="store.maxShiftHours.set(hours)">
+          ± {{ hours }} h
+        </button>
+      }
+    </div>
+  </div>
+</header>
+
+<app-planning-status />
+
+@if (store.result(); as result) {
+  <app-stat-grid [stats]="stats()" />
+
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2>Semaine type, avant et après</h2>
+        <p class="card-hint">Charge attendue par quart d’heure : habitudes + jobs planifiés</p>
+      </div>
+    </header>
+    <app-time-series-chart
+      [window]="week()"
+      [slotStart]="week().start"
+      [slotSize]="slotSize"
+      [series]="series()"
+      [capacity]="planning.capacity()"
+      tickFormat="weekday"
+    />
+    <ul class="legend">
+      <li><span class="swatch accent"></span>Après optimisation</li>
+      <li><span class="swatch muted"></span>Planification actuelle</li>
+      <li><span class="swatch capacity"></span>Capacité</li>
+    </ul>
+  </section>
+
+  <section class="card flush">
+    <header class="card-header padded">
+      <div>
+        <h2>Changements proposés</h2>
+        <p class="card-hint">À reporter dans « Build periodically » ou dans <code>triggers {{ '{' }} cron('…') {{ '}' }}</code> du Jenkinsfile</p>
+      </div>
+    </header>
+    @if (changes().length > 0) {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Job</th><th>Aujourd’hui</th><th>Proposé</th><th class="numeric">Décalage</th><th>Nouvelle planification</th></tr>
+          </thead>
+          <tbody>
+            @for (change of changes(); track change.jobName) {
+              <tr>
+                <td class="strong">{{ change.jobName }}</td>
+                <td><span class="muted">{{ change.fromTimes }}</span><br /><code class="spec">{{ change.fromSpec }}</code></td>
+                <td class="tone-accent">{{ change.toTimes }}</td>
+                <td class="numeric">{{ change.shift }}</td>
+                <td><app-copy-button [text]="change.toCron" /></td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+      <p class="note padded-empty">
+        Le cron proposé fixe la minute. Pour garder l’étalement automatique de Jenkins, vous pouvez remplacer la minute
+        par <code>H(a-b)</code> dans une plage proche.
+      </p>
+    } @else {
+      <p class="empty padded-empty">
+        Les planifications actuelles sont déjà bien réparties avec un décalage de ± {{ store.maxShiftHours() }} h.
+        Essayez un décalage plus grand, ou déverrouillez des jobs.
+      </p>
+    }
+  </section>
+
+  <section class="card flush">
+    <header class="card-header padded">
+      <div>
+        <h2>Jobs planifiés</h2>
+        <p class="card-hint">Verrouillez les jobs dont l’horaire est imposé (fenêtre métier, dépendance…)</p>
+      </div>
+    </header>
+    @if (jobs().length > 0) {
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr><th>Job</th><th>Planification</th><th class="numeric">Durée typique</th><th class="numeric">Exéc./semaine</th><th>Statut</th><th>Ne pas déplacer</th></tr>
+          </thead>
+          <tbody>
+            @for (job of jobs(); track job.jobName) {
+              <tr>
+                <td class="strong">{{ job.jobName }}</td>
+                <td>
+                  <code class="spec">{{ job.spec }}</code>
+                  @if (job.approximate) {
+                    <span class="muted" title="Aucune exécution planifiée observée : la valeur de H est estimée"> ≈</span>
+                  }
+                </td>
+                <td class="numeric">{{ job.duration }}</td>
+                <td class="numeric">{{ job.perWeek }}</td>
+                <td class="muted">{{ job.status }}</td>
+                <td>
+                  <input type="checkbox" [checked]="job.locked" [disabled]="!job.lockable" (change)="store.toggleLock(job.jobName)" [attr.aria-label]="'Verrouiller ' + job.jobName" />
+                </td>
+              </tr>
+            }
+          </tbody>
+        </table>
+      </div>
+    } @else {
+      <p class="empty padded-empty">
+        Aucun job planifié trouvé. Les planifications sont lues dans la configuration des jobs (droit Job/ExtendedRead).
+      </p>
+    }
+  </section>
+}

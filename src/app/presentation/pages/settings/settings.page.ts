@@ -3,6 +3,7 @@ import { takeUntilDestroyed, toSignal } from '@angular/core/rxjs-interop';
 import { NonNullableFormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { SettingsStore } from '@application/settings.store';
+import { PlanningStore } from '@application/planning.store';
 import { WorkloadStore } from '@application/workload.store';
 import { onlineExecutors } from '@domain/agent-node';
 import { JenkinsError } from '@domain/jenkins-error';
@@ -27,6 +28,7 @@ const URL_PATTERN = /^https?:\/\/\S+$/i;
 export class SettingsPage {
   private readonly settingsStore = inject(SettingsStore);
   private readonly workloadStore = inject(WorkloadStore);
+  private readonly planningStore = inject(PlanningStore);
   private readonly repository = inject(JenkinsRepository);
   private readonly router = inject(Router);
   private readonly destroyRef = inject(DestroyRef);
@@ -44,6 +46,10 @@ export class SettingsPage {
     maintenanceDurationHours: [
       this.initial.maintenanceDurationHours,
       [Validators.required, Validators.min(1), Validators.max(24)],
+    ],
+    planningHistoryDays: [
+      this.initial.planningHistoryDays,
+      [Validators.required, Validators.min(7), Validators.max(90)],
     ],
   });
 
@@ -91,6 +97,7 @@ export class SettingsPage {
   protected save(): void {
     if (!this.validate()) return;
     this.settingsStore.save(this.value());
+    this.planningStore.reset();
     this.workloadStore.load();
     void this.router.navigateByUrl('/');
   }

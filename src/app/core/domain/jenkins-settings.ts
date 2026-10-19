@@ -12,6 +12,8 @@ export interface JenkinsSettings {
   readonly idleThresholdMinutes: number;
   /** Durée (heures) de la fenêtre de maintenance recherchée. */
   readonly maintenanceDurationHours: number;
+  /** Jours d'historique utilisés par les prévisions et la planification. */
+  readonly planningHistoryDays: number;
 }
 
 export const DEFAULT_SETTINGS: JenkinsSettings = {
@@ -23,6 +25,7 @@ export const DEFAULT_SETTINGS: JenkinsSettings = {
   maxBuildsPerJob: 300,
   idleThresholdMinutes: 30,
   maintenanceDurationHours: 2,
+  planningHistoryDays: 28,
 };
 
 export function isConfigured(settings: JenkinsSettings): boolean {

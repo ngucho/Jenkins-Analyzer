@@ -3,7 +3,7 @@ import { MINUTE } from '../time-window';
 import { computeJobStats } from './job-stats';
 
 function build(jobName: string, minutes: number, result: BuildResult, start = 0): Build {
-  return { id: `${jobName}-${start}`, jobName, number: 1, start, end: start + minutes * MINUTE, result, node: null, url: '#' };
+  return { id: `${jobName}-${start}`, jobName, number: 1, start, end: start + minutes * MINUTE, result, node: null, trigger: 'unknown', url: '#' };
 }
 
 describe('computeJobStats', () => {

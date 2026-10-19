@@ -1,9 +1,9 @@
 # Jenkins Analyzer
 
-Application web qui lit l'API REST de Jenkins pour **visualiser la charge de travail** de la
-machine : chronologie des builds, plages creuses, semaine type et créneaux de maintenance
-recommandés. L'objectif : **mieux répartir les jobs** et **savoir quand intervenir** sur la machine
-sans casser de build.
+Application web qui lit l'API REST de Jenkins pour **visualiser, prévoir et mieux répartir la
+charge de travail** de la machine : chronologie des builds, plages creuses, prévision des
+prochains jours, optimisation des planifications et conseil pour placer un nouveau job.
+L'objectif : **équilibrer la charge** et **savoir quand intervenir** sans casser de build.
 
 Angular 20, sans backend : le navigateur interroge Jenkins directement.
 
@@ -43,6 +43,10 @@ puis cochez *Passer par le proxy de développement*.
   hebdomadaires les plus calmes.
 - **Plages creuses** : les plus longues périodes sans aucun build.
 - **Jobs** : exécutions, durées, temps cumulé, part de charge, taux de succès.
+- **Prévisions** : charge attendue sur 1 à 7 jours (habitudes + jobs planifiés), avec fourchette,
+  fenêtres calmes pour une maintenance et risques de saturation.
+- **Optimisation** : décalages proposés pour étaler les jobs planifiés, avec le nouveau cron à copier.
+- **Nouveau job** : les meilleurs créneaux pour un job à ajouter, avec le cron correspondant.
 
 ## Documentation
 
@@ -50,6 +54,8 @@ puis cochez *Passer par le proxy de développement*.
 | --- | --- |
 | [Prise en main](docs/getting-started.md) | **Commencez ici.** Installer, lancer, brancher Jenkins, visite du code, premier exercice, dépannage |
 | [Fonctionnalités](docs/features.md) | Ce qui a été fait et pourquoi, définition de chaque indicateur, calcul des créneaux de maintenance |
+| [Prévisions et planification](docs/planning.md) | Les trois outils d'anticipation : données utilisées, méthodes, comment appliquer les propositions, limites |
+| [Installation pour l'équipe](docs/deployment.md) | Construire la version installable, la déposer sur un NAS, la lancer d'un double-clic |
 | [Architecture](docs/architecture.md) | Découpage en couches, flux de données, choix techniques et leurs raisons, carte des fichiers |
 | [Interrogation de Jenkins](docs/jenkins-api.md) | Requêtes envoyées, authentification, robustesse, CORS et déploiement en production |
 | [Guide de développement](docs/development.md) | Conventions, où mettre quel code, recettes pas à pas, tests, pistes d'évolution |
@@ -60,6 +66,7 @@ puis cochez *Passer par le proxy de développement*.
 | --- | --- |
 | `npm start` | Serveur de dev (+ proxy Jenkins) |
 | `npm run build` | Build de production dans `dist/` |
+| `npm run package` | Version installable (NAS) dans `dist/jenkins-analyzer/`, avec son lanceur |
 | `npm test` | Tests unitaires (watch) |
 | `npm run test:ci` | Tests unitaires en headless (CI, conteneurs) |
 
@@ -68,8 +75,11 @@ puis cochez *Passer par le proxy de développement*.
 ```
 src/app/
 ├── core/domain/      Modèles et calculs métier — TypeScript pur, testé
+│   ├── analytics/    Occupation, plages creuses, semaine type, statistiques
+│   └── planning/     Cron Jenkins, prévision, optimisation, recherche de créneau
 ├── core/ports/       Contrats des sources de données
 ├── application/      État de l'écran (signals)
 ├── infrastructure/   Jenkins HTTP, mode démo, localStorage
 └── presentation/     Pages et composants Angular
+tools/                Lanceur sans dépendance et script de packaging (NAS)
 ```

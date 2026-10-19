@@ -61,10 +61,11 @@
       <label class="checkbox">
         <input type="checkbox" formControlName="useDevProxy" />
         <span>
-          Passer par le proxy de développement
+          Passer par le proxy local (<code>/jenkins-proxy</code>)
           <small>
-            À cocher si Jenkins refuse les appels du navigateur (CORS). Lancez alors l’application avec
-            <code>JENKINS_URL=https://… npm start</code>.
+            À cocher si Jenkins refuse les appels du navigateur (CORS). Le proxy est fourni par
+            <code>npm start</code> et par le lanceur de la version installée ; il lit l’URL de Jenkins
+            dans le fichier <code>.env</code> (<code>JENKINS_URL=…</code>).
           </small>
         </span>
       </label>
@@ -86,8 +87,15 @@
         <span>Builds max. par job</span>
         <div class="with-unit"><input type="number" formControlName="maxBuildsPerJob" min="10" max="5000" /> builds</div>
       </label>
+      <label class="field">
+        <span>Historique des prévisions</span>
+        <div class="with-unit"><input type="number" formControlName="planningHistoryDays" min="7" max="90" /> jours</div>
+      </label>
     </div>
-    <p class="help">Plus la limite de builds est haute, plus l’historique est complet — et plus les requêtes sont lourdes.</p>
+    <p class="help">
+      Plus la limite de builds est haute, plus l’historique est complet — et plus les requêtes sont lourdes.
+      Les prévisions et la planification apprennent sur l’historique indiqué : 4 semaines est un bon compromis.
+    </p>
   </section>
 
   @if (testMessage(); as message) {

@@ -1,18 +1,19 @@
 import { Injectable } from '@angular/core';
-import { DEFAULT_SETTINGS, JenkinsSettings } from '@domain/jenkins-settings';
+import { JenkinsSettings } from '@domain/jenkins-settings';
 import { SettingsRepository } from '@ports/settings.repository';
+import { sanitizeSettings } from './settings-sanitizer';
 
 const STORAGE_KEY = 'jenkins-workload.settings';
 
 /** Persiste la configuration dans le navigateur (le token reste local au poste). */
 @Injectable()
 export class LocalStorageSettingsRepository extends SettingsRepository {
-  load(): JenkinsSettings {
+  loadStored(): Partial<JenkinsSettings> | null {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
-      return stored ? { ...DEFAULT_SETTINGS, ...(JSON.parse(stored) as Partial<JenkinsSettings>) } : DEFAULT_SETTINGS;
+      return stored ? sanitizeSettings(JSON.parse(stored)) : null;
     } catch {
-      return DEFAULT_SETTINGS;
+      return null;
     }
   }
 

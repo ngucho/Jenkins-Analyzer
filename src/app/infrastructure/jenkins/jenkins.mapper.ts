@@ -1,6 +1,6 @@
 import { AgentNode } from '@domain/agent-node';
-import { Build, BuildResult } from '@domain/build';
-import { BuildDto, ComputerDto, JobItemDto } from './jenkins-api.types';
+import { Build, BuildResult, BuildTrigger } from '@domain/build';
+import { BuildActionDto, BuildDto, ComputerDto, JobItemDto } from './jenkins-api.types';
 
 const KNOWN_RESULTS: readonly BuildResult[] = [
   'SUCCESS',
@@ -46,8 +46,23 @@ export function toBuild(dto: BuildDto, jobName: string, now: number): Build {
     end,
     result,
     node: dto.builtOn === undefined ? null : dto.builtOn || 'built-in',
+    trigger: toTrigger(dto.actions),
     url: dto.url,
   };
+}
+
+/** Classes Java des causes Jenkins → déclencheur du domaine (la première cause l'emporte). */
+const CAUSE_PATTERNS: readonly [RegExp, BuildTrigger][] = [
+  [/TimerTrigger|ParameterizedTimerTrigger/, 'timer'],
+  [/SCMTrigger|BranchIndexing|BranchEvent|GitHubPush|GitLabWebHook|BitBucketPush|Push/i, 'scm'],
+  [/UserIdCause|UserCause|RebuildCause|ReplayCause/, 'user'],
+  [/UpstreamCause/, 'upstream'],
+];
+
+export function toTrigger(actions: readonly BuildActionDto[] | undefined): BuildTrigger {
+  const cause = actions?.flatMap((action) => action.causes ?? [])[0];
+  if (!cause) return 'unknown';
+  return CAUSE_PATTERNS.find(([pattern]) => pattern.test(cause._class))?.[1] ?? 'other';
 }
 
 export function toAgentNode(dto: ComputerDto): AgentNode {

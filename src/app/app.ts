@@ -13,11 +13,14 @@ import { SettingsStore } from '@application/settings.store';
           <rect x="10" y="7" width="4" height="15" rx="1.5" />
           <rect x="18" y="3" width="4" height="19" rx="1.5" />
         </svg>
-        Jenkins Workload
+        Jenkins Analyzer
       </a>
 
       <nav>
         <a routerLink="/" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Tableau de bord</a>
+        <a routerLink="/forecast" routerLinkActive="active">Prévisions</a>
+        <a routerLink="/optimize" routerLinkActive="active">Optimisation</a>
+        <a routerLink="/new-job" routerLinkActive="active">Nouveau job</a>
         <a routerLink="/settings" routerLinkActive="active">Paramètres</a>
       </nav>
 

@@ -18,7 +18,15 @@ import { JenkinsSettings } from '@domain/jenkins-settings';
 import { overlaps, TimeWindow } from '@domain/time-window';
 import { Build } from '@domain/build';
 import { WorkloadSnapshot } from '@domain/workload-snapshot';
-import { ConnectionReport, JenkinsRepository, WorkloadFetchEvent } from '@ports/jenkins.repository';
+import { JenkinsJob } from '@domain/job';
+import {
+  ConnectionReport,
+  JenkinsRepository,
+  ScheduleFetchEvent,
+  ScheduleReport,
+  WorkloadFetchEvent,
+} from '@ports/jenkins.repository';
+import { extractTimerSpecs } from './jenkins-config.parser';
 import { ComputerSetDto, JobBuildsDto, JobListDto } from './jenkins-api.types';
 import { JenkinsHttpClient } from './jenkins-http.client';
 import { DiscoveredJob, flattenJobTree, toAgentNode, toBuild } from './jenkins.mapper';
@@ -28,7 +36,8 @@ const FOLDER_DEPTH = 5;
 /** Nombre de requêtes d'historique envoyées en parallèle, pour ménager Jenkins. */
 const PARALLEL_REQUESTS = 4;
 
-const BUILD_FIELDS = 'number,timestamp,duration,estimatedDuration,result,building,builtOn,url';
+const BUILD_FIELDS =
+  'number,timestamp,duration,estimatedDuration,result,building,builtOn,url,actions[causes[_class]]';
 const COMPUTER_TREE = 'computer[displayName,numExecutors,offline,idle]';
 
 /** `jobs[name,url,_class,jobs[name,url,_class,…]]` sur `depth` niveaux. */
@@ -85,6 +94,45 @@ export class HttpJenkinsRepository extends JenkinsRepository {
     );
   }
 
+  /**
+   * Lit la planification de chaque job dans son `config.xml`. Nécessite le
+   * droit Job/ExtendedRead ; un job illisible est signalé, pas bloquant.
+   */
+  fetchSchedules(settings: JenkinsSettings, jobs: readonly JenkinsJob[]): Observable<ScheduleFetchEvent> {
+    const specs = new Map<string, readonly string[]>();
+    const unreadableJobs: string[] = [];
+    let completed = 0;
+    const progress = (): ScheduleFetchEvent => ({ type: 'progress', completed, total: jobs.length });
+
+    return concat(
+      of(progress()),
+      from(jobs).pipe(
+        mergeMap(
+          (job) =>
+            this.client.getText(settings, `${job.ref}config.xml`).pipe(
+              map((xml) => ({ job, specs: extractTimerSpecs(xml) })),
+              catchError((error: JenkinsError) =>
+                error.kind === 'unauthorized' || error.kind === 'network'
+                  ? throwError(() => error)
+                  : of({ job, specs: null }),
+              ),
+            ),
+          PARALLEL_REQUESTS,
+        ),
+        map((result) => {
+          completed++;
+          if (result.specs === null) unreadableJobs.push(result.job.fullName);
+          else if (result.specs.length > 0) specs.set(result.job.fullName, result.specs);
+          return progress();
+        }),
+      ),
+      defer(() => {
+        const report: ScheduleReport = { specs, unreadableJobs };
+        return of<ScheduleFetchEvent>({ type: 'complete', result: report });
+      }),
+    );
+  }
+
   /** Arborescence des jobs et nœuds : deux requêtes légères, en parallèle. */
   private fetchInventory(settings: JenkinsSettings) {
     return forkJoin({
@@ -134,12 +182,12 @@ function toCompleteEvent(
   }
   const snapshot: WorkloadSnapshot = {
     window,
-    jobs: discovered.map(({ fullName, url }) => ({ fullName, url })),
+    jobs: discovered.map(({ fullName, url, apiPath }) => ({ fullName, url, ref: apiPath })),
     builds: histories.flatMap((h) => h.builds),
     nodes,
     fetchedAt: Date.now(),
     truncatedJobs: histories.filter((h) => h.truncated).map((h) => h.job.fullName),
     failedJobs,
   };
-  return { type: 'complete', snapshot };
+  return { type: 'complete', result: snapshot };
 }

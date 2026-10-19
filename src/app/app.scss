@@ -18,6 +18,7 @@
 }
 
 .brand {
+  flex-shrink: 0;
   display: flex;
   align-items: center;
   gap: 10px;
@@ -34,6 +35,9 @@
 nav {
   display: flex;
   gap: 4px;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
 
   a {
     padding: 6px 10px;
@@ -41,6 +45,8 @@ nav {
     font-size: 13px;
     color: var(--text-muted);
     text-decoration: none;
+
+    white-space: nowrap;
 
     &:hover {
       color: var(--text);

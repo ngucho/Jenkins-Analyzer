@@ -76,6 +76,7 @@ Pour la production, voir [Déploiement](./jenkins-api.md#cors-et-déploiement).
 | --- | --- |
 | `npm start` | Serveur de dev sur le port 4200, avec le proxy Jenkins |
 | `npm run build` | Build de production dans `dist/jenkins-workload/browser/` |
+| `npm run package` | Version installable pour l'équipe (NAS) dans `dist/jenkins-analyzer/` — voir [Installation](./deployment.md) |
 | `npm test` | Tests unitaires en mode watch (ouvre Chrome) |
 | `npm run test:ci` | Tests une seule fois, Chrome headless (CI, conteneurs, WSL) |
 
@@ -87,6 +88,8 @@ Si `npm run test:ci` ne trouve pas Chrome, indiquez son chemin :
 ```
 src/app/
 ├── core/domain/        ← le cœur : modèles + calculs. Commencez votre lecture ici.
+│   ├── analytics/      ← tableau de bord : occupation, plages creuses, semaine type
+│   └── planning/       ← prévisions, cron Jenkins, optimisation, nouveau job
 ├── core/ports/         ← les interfaces que le domaine attend du monde extérieur
 ├── application/        ← l'état de l'écran (stores à base de signals)
 ├── infrastructure/     ← le code qui parle à Jenkins, au localStorage, la démo
@@ -102,6 +105,8 @@ Ordre de lecture conseillé pour comprendre le projet :
 4. `infrastructure/jenkins/http-jenkins.repository.ts` — comment on interroge Jenkins.
 5. `application/workload.store.ts` — comment tout est assemblé pour l'écran.
 6. `presentation/pages/dashboard/` — comment c'est affiché.
+7. Pour les prévisions : `core/domain/planning/weekly-profile.ts` puis `forecast.ts`, et
+   `application/planning.store.ts` qui charge les données communes aux trois pages de planification.
 
 L'[architecture](./architecture.md) explique pourquoi le code est découpé ainsi.
 
@@ -128,6 +133,7 @@ Pour aller plus loin, voir le [guide de développement](./development.md).
 | « Accès refusé » | Droits insuffisants | Donnez *Overall/Read* et *Job/Read* au compte |
 | « Ressource introuvable » | URL incorrecte | Utilisez l'URL racine de Jenkins, sans `/job/...` |
 | « La réponse n'est pas du JSON » | L'URL pointe vers une page de login SSO ou un autre site | Vérifiez l'URL ; avec un SSO, passez par le proxy |
+| « Planification illisible » sur les pages de prévision | Le compte n'a pas le droit *Job/ExtendedRead* | Ajoutez ce droit pour lire les `config.xml` ; sans lui, les prévisions restent statistiques |
 | Bandeau « Historique incomplet » | Plus de builds que la limite par job sur la période | Augmentez *Builds max. par job* dans les paramètres |
 | `http proxy error … ECONNREFUSED` dans le terminal | Proxy coché mais `JENKINS_URL` non défini : le proxy vise `localhost:8080` | Créez le fichier `.env` (copie de `.env.example`) avec `JENKINS_URL=...`, puis relancez `npm start` (le démarrage affiche `[jenkins-proxy] … -> <cible>` : vérifiez-la). Un changement de `.env` n'est pris en compte qu'après redémarrage |
 | Chargement très long | Beaucoup de jobs | Réduisez la période ou la limite de builds par job |

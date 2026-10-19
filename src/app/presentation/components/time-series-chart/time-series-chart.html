@@ -1,0 +1,53 @@
+<svg
+  class="chart"
+  [attr.width]="width()"
+  [attr.height]="height()"
+  (pointermove)="onPointerMove($event)"
+  (pointerleave)="onPointerLeave()"
+  role="img"
+  aria-label="Graphique de charge"
+>
+  @for (rect of highlightRects(); track rect.key) {
+    <rect class="highlight" [attr.data-tone]="rect.tone" [attr.x]="rect.x" [attr.y]="axisHeight" [attr.width]="rect.width" [attr.height]="height() - axisHeight" />
+  }
+
+  @for (tick of xTicks(); track tick.time) {
+    <line class="grid" [class.major]="tick.major" [attr.x1]="tick.x" [attr.x2]="tick.x" [attr.y1]="axisHeight - 4" [attr.y2]="height()" />
+    <text class="tick-label" [class.major]="tick.major" [attr.x]="tick.x + 4" y="14">{{ tick.label }}</text>
+  }
+
+  @for (tick of yTicks(); track tick.value) {
+    <line class="grid horizontal" [attr.x1]="margin.left" [attr.x2]="width() - margin.right" [attr.y1]="tick.y" [attr.y2]="tick.y" />
+    <text class="y-label" [attr.x]="margin.left - 8" [attr.y]="tick.y + 4">{{ tick.value }}</text>
+  }
+
+  @if (bandPath()) {
+    <path class="band" [attr.d]="bandPath()" />
+  }
+  @for (path of paths(); track path.label) {
+    <path class="series" [class.area]="path.kind === 'area'" [attr.data-tone]="path.tone" [attr.d]="path.d" />
+  }
+  @if (capacityY(); as capacityY) {
+    <line class="capacity" [attr.x1]="margin.left" [attr.x2]="width() - margin.right" [attr.y1]="capacityY" [attr.y2]="capacityY" />
+  }
+
+  @for (bar of barRects(); track bar.id) {
+    <rect class="bar" [attr.data-tone]="bar.tone" [attr.x]="bar.x" [attr.y]="bar.y" [attr.width]="bar.width" [attr.height]="laneHeight" rx="2" />
+  }
+
+  @if (markerX(); as markerX) {
+    <line class="marker" [attr.x1]="markerX" [attr.x2]="markerX" [attr.y1]="axisHeight - 4" [attr.y2]="height()" />
+  }
+  @if (hover(); as hover) {
+    <line class="cursor" [attr.x1]="hover.x" [attr.x2]="hover.x" [attr.y1]="axisHeight" [attr.y2]="height()" />
+  }
+</svg>
+
+@if (hover(); as hover) {
+  <div class="tooltip" [style.left.px]="hover.x" [style.top.px]="hover.y" [class.flip]="hover.x > width() - 260">
+    <strong>{{ hover.title }}</strong>
+    @for (line of hover.lines; track $index) {
+      <span>{{ line }}</span>
+    }
+  </div>
+}

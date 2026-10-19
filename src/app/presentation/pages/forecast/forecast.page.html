@@ -1,0 +1,131 @@
+<header class="page-header">
+  <div>
+    <h1>Prévisions</h1>
+    <p class="subtitle">
+      Charge attendue sur les prochains jours : habitudes apprises sur l’historique, plus les exécutions planifiées
+      (cron) des jobs.
+    </p>
+  </div>
+  <div class="toolbar">
+    <div class="segmented" role="radiogroup" aria-label="Horizon de prévision">
+      @for (days of horizons; track days) {
+        <button type="button" role="radio" [attr.aria-checked]="store.horizonDays() === days" [class.active]="store.horizonDays() === days" (click)="store.horizonDays.set(days)">
+          {{ horizonLabel(days) }}
+        </button>
+      }
+    </div>
+  </div>
+</header>
+
+<app-planning-status />
+
+@if (planning.ready()) {
+  <app-stat-grid [stats]="stats()" />
+
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2>Charge prévue</h2>
+        <p class="card-hint">Par quart d’heure · survolez pour le détail</p>
+      </div>
+    </header>
+    <app-time-series-chart
+      [window]="store.window()"
+      [slotStart]="store.window().start"
+      [slotSize]="slotSize"
+      [series]="series()"
+      [band]="band()"
+      [capacity]="planning.capacity()"
+      [highlights]="highlights()"
+      [bars]="bars()"
+    />
+    <ul class="legend">
+      <li><span class="swatch accent"></span>Charge attendue</li>
+      <li><span class="swatch band"></span>Fourchette probable (~80 %)</li>
+      <li><span class="swatch scheduled"></span>Jobs planifiés</li>
+      <li><span class="swatch capacity"></span>Capacité</li>
+      <li><span class="swatch idle"></span>Fenêtre calme ≥ {{ settings().maintenanceDurationHours }} h</li>
+      <li><span class="swatch danger"></span>Risque de saturation</li>
+    </ul>
+  </section>
+
+  <div class="columns">
+    <section class="card">
+      <header class="card-header">
+        <div>
+          <h2>Fenêtres calmes prévues</h2>
+          <p class="card-hint">Sans job planifié et avec une charge très faible : idéales pour une maintenance</p>
+        </div>
+      </header>
+      @if (quietList().length > 0) {
+        <ul class="list">
+          @for (item of quietList(); track item.key) {
+            <li><span class="strong">{{ item.day }}</span><span class="muted">{{ item.range }}</span><span class="tone-idle">{{ item.duration }}</span></li>
+          }
+        </ul>
+      } @else {
+        <p class="empty">Aucune fenêtre calme de {{ settings().maintenanceDurationHours }} h sur cet horizon. Essayez un horizon plus long.</p>
+      }
+    </section>
+
+    <section class="card">
+      <header class="card-header">
+        <div>
+          <h2>Risques de saturation</h2>
+          <p class="card-hint">Périodes où la charge pourrait atteindre le nombre d’exécuteurs</p>
+        </div>
+      </header>
+      @if (riskList().length > 0) {
+        <ul class="list">
+          @for (item of riskList(); track item.key) {
+            <li><span class="strong">{{ item.day }}</span><span class="muted">{{ item.range }}</span><span class="tone-danger">{{ item.duration }}</span></li>
+          }
+        </ul>
+        <p class="note">Les builds lancés à ces moments risquent d’attendre en file. L’onglet Optimisation propose de décaler des jobs planifiés.</p>
+      } @else {
+        <p class="empty">Aucun risque détecté : la capacité devrait suffire.</p>
+      }
+    </section>
+  </div>
+
+  <div class="columns">
+    <section class="card flush">
+      <header class="card-header padded">
+        <div>
+          <h2>Prochaines exécutions planifiées</h2>
+          <p class="card-hint">Durée typique : médiane des exécutions passées</p>
+        </div>
+      </header>
+      @if (upcomingRuns().length > 0) {
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>Job</th><th>Début</th><th class="numeric">Durée</th></tr></thead>
+            <tbody>
+              @for (run of upcomingRuns(); track run.key) {
+                <tr><td class="strong">{{ run.jobName }}</td><td class="muted">{{ run.when }}</td><td class="numeric">{{ run.duration }}</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+      } @else {
+        <p class="empty padded-empty">Aucune exécution planifiée sur cet horizon.</p>
+      }
+    </section>
+
+    <section class="card">
+      <header class="card-header">
+        <div>
+          <h2>Comment est calculée la prévision</h2>
+        </div>
+      </header>
+      <ol class="method">
+        <li>Les builds passés <strong>non planifiés</strong> (commits, lancements manuels…) donnent la charge habituelle de chaque quart d’heure de la semaine, les semaines récentes comptant davantage.</li>
+        <li>Les <strong>jobs planifiés</strong> sont projetés d’après leur cron, avec leur durée typique.</li>
+        <li>La <strong>fourchette</strong> reflète la variabilité observée d’une semaine à l’autre.</li>
+        @if (store.backtest(); as backtest) {
+          <li>Rejouée sur la semaine passée, la méthode s’est trompée en moyenne de <strong>{{ backtest.meanAbsoluteError.toFixed(2) }}</strong> build simultané (charge réelle moyenne : {{ backtest.actualMean.toFixed(2) }}).</li>
+        }
+      </ol>
+    </section>
+  </div>
+}

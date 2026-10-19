@@ -1,5 +1,5 @@
 import { DAY, HOUR, MINUTE, TimeWindow, windowDuration } from '@domain/time-window';
-import { formatShortDate, formatTime } from '../../shared/format';
+import { formatShortDate, formatTime } from '../format';
 
 export interface TimeTick {
   readonly time: number;

@@ -67,3 +67,20 @@ export function formatRange(start: number, end: number): string {
     ? `${formatTime(start)} → ${formatTime(end)}`
     : `${formatTime(start)} → ${formatShortDate(end)} ${formatTime(end)}`;
 }
+
+/** « 02:15 » à partir d'une minute de la journée. */
+export function formatMinuteOfDay(minutes: number): string {
+  const normalized = ((minutes % 1440) + 1440) % 1440;
+  return `${String(Math.floor(normalized / 60)).padStart(2, '0')}:${String(normalized % 60).padStart(2, '0')}`;
+}
+
+/** « +1 h 30 », « −45 min » : décalage proposé pour un job. */
+export function formatShift(minutes: number): string {
+  const sign = minutes < 0 ? '−' : '+';
+  return `${sign}${formatDuration(Math.abs(minutes) * MINUTE)}`;
+}
+
+/** « 02:00, 14:00 » : heures d'un job planifié tous les jours à la même minute. */
+export function formatTimesOfDay(minute: number, hours: readonly number[]): string {
+  return hours.map((h) => formatMinuteOfDay(h * 60 + minute)).join(', ');
+}

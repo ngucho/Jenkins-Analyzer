@@ -1,0 +1,34 @@
+JENKINS ANALYZER — VERSION INSTALLÉE
+====================================
+
+Prérequis : Node.js 20.19 ou plus récent sur le poste (https://nodejs.org).
+
+LANCER
+  Windows       : double-cliquez sur « Lancer Jenkins Analyzer.bat ».
+  macOS / Linux : exécutez ./lancer.sh
+  L'application s'ouvre dans le navigateur sur http://localhost:4300.
+  Laissez la fenêtre noire ouverte pendant l'utilisation ; fermez-la pour arrêter.
+
+PREMIÈRE UTILISATION
+  Dans « Paramètres », choisissez Jenkins, puis saisissez VOTRE utilisateur et
+  VOTRE token API (profil Jenkins › Security › API Token). Ils restent dans
+  votre navigateur, sur votre poste, et ne sont jamais écrits dans ce dossier.
+
+CONFIGURATION DE L'ÉQUIPE (administrateur)
+  1. .env              : adresse de Jenkins utilisée par le relais (proxy).
+                         Copiez .env.example en .env et renseignez JENKINS_URL.
+  2. app/app-config.json : réglages par défaut proposés à tous, par exemple :
+       {
+         "dataSource": "jenkins",
+         "baseUrl": "https://jenkins.mon-entreprise.fr",
+         "useDevProxy": true,
+         "planningHistoryDays": 28
+       }
+     L'utilisateur et le token n'y sont jamais lus (ils sont personnels).
+     Chacun peut ensuite changer ses réglages dans l'application.
+
+EN CAS DE PROBLÈME
+  « Node.js est introuvable »    : installez Node.js, puis relancez.
+  « Port 4300 déjà utilisé »     : l'application tourne déjà ; sinon ajoutez PORT=4301 dans .env.
+  « Jenkins injoignable »        : vérifiez JENKINS_URL dans .env (et JENKINS_INSECURE=true
+                                   pour un certificat interne).

@@ -1,0 +1,22 @@
+@if (store.loading()) {
+  <div class="loading">
+    <span>{{ phaseLabel() }}</span>
+    <div class="progress"><span [style.width.%]="(store.progress() ?? 0.06) * 100"></span></div>
+  </div>
+} @else if (store.error(); as error) {
+  <div class="alert error">
+    <strong>Impossible de charger les données.</strong> {{ error }}
+    <a routerLink="/settings">Vérifier les paramètres</a>
+    <button type="button" class="link" (click)="store.load()">Réessayer</button>
+  </div>
+} @else if (info(); as info) {
+  <div class="info">
+    <span>{{ info.text }}</span>
+    <span class="muted">{{ info.fetched }}</span>
+    <button type="button" class="link" (click)="store.load()">Actualiser</button>
+  </div>
+}
+
+@for (warning of warnings(); track warning) {
+  <div class="alert warning">{{ warning }}</div>
+}

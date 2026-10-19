@@ -1,0 +1,122 @@
+:host {
+  display: block;
+  position: relative;
+  width: 100%;
+  user-select: none;
+}
+
+.chart {
+  display: block;
+  cursor: crosshair;
+}
+
+/* Une teinte par rôle ; les séries, barres et zones la reprennent. */
+[data-tone='accent'] { --tone: var(--accent); --tone-soft: var(--accent-soft); }
+[data-tone='muted'] { --tone: var(--text-muted); --tone-soft: transparent; }
+[data-tone='scheduled'] { --tone: var(--warning); --tone-soft: color-mix(in srgb, var(--warning) 18%, transparent); }
+[data-tone='idle'] { --tone: var(--idle); --tone-soft: var(--idle-soft); }
+[data-tone='danger'] { --tone: var(--danger); --tone-soft: color-mix(in srgb, var(--danger) 12%, transparent); }
+
+.highlight {
+  fill: var(--tone-soft);
+}
+
+.grid {
+  stroke: var(--border);
+
+  &.major {
+    stroke: var(--border-strong);
+  }
+
+  &.horizontal {
+    stroke-dasharray: 2 4;
+  }
+}
+
+.tick-label,
+.y-label {
+  font-size: 11px;
+  fill: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tick-label.major {
+  fill: var(--text);
+  font-weight: 600;
+}
+
+.y-label {
+  text-anchor: end;
+}
+
+.band {
+  fill: var(--accent-soft);
+  opacity: 0.7;
+}
+
+.series {
+  fill: none;
+  stroke: var(--tone);
+  stroke-width: 1.5;
+  stroke-linejoin: round;
+
+  &.area {
+    fill: var(--tone-soft);
+  }
+
+  &[data-tone='muted'] {
+    stroke-dasharray: 4 3;
+  }
+}
+
+.capacity {
+  stroke: var(--text-muted);
+  stroke-dasharray: 6 4;
+}
+
+.bar {
+  fill: var(--tone);
+  opacity: 0.85;
+}
+
+.marker {
+  stroke: var(--danger);
+  stroke-width: 1.5;
+}
+
+.cursor {
+  stroke: var(--text-muted);
+  pointer-events: none;
+}
+
+.tooltip {
+  position: absolute;
+  transform: translate(14px, 14px);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 180px;
+  max-width: 280px;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--tooltip-bg);
+  color: var(--tooltip-text);
+  font-size: 12px;
+  line-height: 1.4;
+  pointer-events: none;
+  box-shadow: var(--shadow-lg);
+  z-index: 2;
+
+  &.flip {
+    transform: translate(calc(-100% - 14px), 14px);
+  }
+
+  strong {
+    font-weight: 600;
+    word-break: break-word;
+  }
+
+  span {
+    opacity: 0.8;
+  }
+}

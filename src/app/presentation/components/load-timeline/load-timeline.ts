@@ -15,8 +15,8 @@ import { IdleSlot } from '@domain/analytics/occupancy';
 import { TimeWindow, windowDuration } from '@domain/time-window';
 import { RESULT_LABELS, resultClass } from '../../shared/build-result';
 import { formatDateTime, formatDuration, formatRange, formatShortDate } from '../../shared/format';
-import { packLanes } from './lane-layout';
-import { timeTicks } from './time-ticks';
+import { packLanes } from '../../shared/chart/lane-layout';
+import { timeTicks } from '../../shared/chart/time-ticks';
 
 const MARGIN = { left: 40, right: 16 };
 const AXIS_HEIGHT = 28;

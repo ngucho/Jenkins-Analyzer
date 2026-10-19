@@ -5,17 +5,28 @@ import { Build } from '@domain/build';
 import { JenkinsSettings } from '@domain/jenkins-settings';
 import { DAY, HOUR, MINUTE, overlaps, TimeWindow } from '@domain/time-window';
 import { weekdayOf } from '@domain/analytics/weekly-heatmap';
-import { ConnectionReport, JenkinsRepository, WorkloadFetchEvent } from '@ports/jenkins.repository';
+import { JenkinsJob } from '@domain/job';
+import { stableHash } from '@domain/planning/jenkins-cron';
+import {
+  ConnectionReport,
+  JenkinsRepository,
+  ScheduleFetchEvent,
+  WorkloadFetchEvent,
+} from '@ports/jenkins.repository';
+
+type DemoDays = 'all' | 'workdays' | readonly number[];
 
 /** Profil d'un job fictif : quand il tourne et combien de temps. */
 interface DemoJobProfile {
   readonly name: string;
   readonly node: string;
-  /** Heures de lancement fixes (jobs planifiés). */
+  /** Jobs planifiés : planification Jenkins et heures de lancement correspondantes. */
+  readonly cron?: string;
   readonly scheduledHours?: readonly number[];
+  /** Jours d'exécution (0 = lundi) ; par défaut, jours ouvrés. */
+  readonly days?: DemoDays;
   /** Lancements par heure ouvrée (jobs déclenchés par les commits). */
   readonly commitsPerHour?: number;
-  readonly weekendToo?: boolean;
   readonly averageMinutes: number;
   readonly failureRate: number;
 }
@@ -25,11 +36,14 @@ const PROFILES: readonly DemoJobProfile[] = [
   { name: 'backend/api-tests', node: 'agent-linux-01', commitsPerHour: 1.4, averageMinutes: 22, failureRate: 0.12 },
   { name: 'frontend/web-build', node: 'agent-linux-02', commitsPerHour: 1.8, averageMinutes: 7, failureRate: 0.05 },
   { name: 'frontend/e2e', node: 'agent-linux-02', commitsPerHour: 0.6, averageMinutes: 35, failureRate: 0.18 },
-  { name: 'quality/sonar-analysis', node: 'built-in', scheduledHours: [12, 18], averageMinutes: 25, failureRate: 0.03 },
-  { name: 'nightly/full-regression', node: 'agent-linux-01', scheduledHours: [1], weekendToo: true, averageMinutes: 140, failureRate: 0.1 },
-  { name: 'nightly/docker-images', node: 'agent-linux-02', scheduledHours: [3], weekendToo: true, averageMinutes: 45, failureRate: 0.04 },
-  { name: 'ops/db-backup', node: 'built-in', scheduledHours: [23], weekendToo: true, averageMinutes: 30, failureRate: 0.01 },
-  { name: 'release/deploy-staging', node: 'built-in', scheduledHours: [10, 15], averageMinutes: 12, failureRate: 0.06 },
+  { name: 'quality/sonar-analysis', node: 'built-in', cron: 'H 12,18 * * 1-5', scheduledHours: [12, 18], averageMinutes: 25, failureRate: 0.03 },
+  { name: 'quality/security-scan', node: 'agent-linux-01', cron: 'H 18 * * 1-5', scheduledHours: [18], averageMinutes: 40, failureRate: 0.05 },
+  { name: 'nightly/full-regression', node: 'agent-linux-01', cron: 'H 1 * * *', scheduledHours: [1], days: 'all', averageMinutes: 140, failureRate: 0.1 },
+  { name: 'nightly/perf-tests', node: 'agent-linux-02', cron: 'H 1 * * 1-5', scheduledHours: [1], averageMinutes: 90, failureRate: 0.08 },
+  { name: 'nightly/docker-images', node: 'agent-linux-02', cron: 'H 3 * * *', scheduledHours: [3], days: 'all', averageMinutes: 45, failureRate: 0.04 },
+  { name: 'ops/db-backup', node: 'built-in', cron: 'H 23 * * *', scheduledHours: [23], days: 'all', averageMinutes: 30, failureRate: 0.01 },
+  { name: 'ops/weekly-report', node: 'built-in', cron: 'H 9 * * 1', scheduledHours: [9], days: [0], averageMinutes: 60, failureRate: 0.02 },
+  { name: 'release/deploy-staging', node: 'built-in', cron: 'H 10,15 * * 1-5', scheduledHours: [10, 15], averageMinutes: 12, failureRate: 0.06 },
 ];
 
 const NODES: readonly AgentNode[] = [
@@ -67,9 +81,9 @@ export class DemoJenkinsRepository extends JenkinsRepository {
     );
     const complete$ = of<WorkloadFetchEvent>({
       type: 'complete',
-      snapshot: {
+      result: {
         window,
-        jobs: PROFILES.map(({ name }) => ({ fullName: name, url: '#' })),
+        jobs: PROFILES.map(({ name }) => ({ fullName: name, url: '#', ref: name })),
         builds,
         nodes: NODES,
         fetchedAt: now,
@@ -78,6 +92,16 @@ export class DemoJenkinsRepository extends JenkinsRepository {
       },
     });
     return concat(progress$, complete$).pipe(delay(SIMULATED_LATENCY));
+  }
+
+  fetchSchedules(_settings: JenkinsSettings, jobs: readonly JenkinsJob[]): Observable<ScheduleFetchEvent> {
+    const specs = new Map<string, readonly string[]>();
+    for (const profile of PROFILES) {
+      if (profile.cron && jobs.some((job) => job.ref === profile.name)) specs.set(profile.name, [profile.cron]);
+    }
+    return of<ScheduleFetchEvent>({ type: 'complete', result: { specs, unreadableJobs: [] } }).pipe(
+      delay(SIMULATED_LATENCY),
+    );
   }
 }
 
@@ -100,6 +124,7 @@ function generateBuilds(profile: DemoJobProfile, window: TimeWindow, now: number
         end: running ? now : start + duration,
         result: running ? 'RUNNING' : pickResult(profile.failureRate, random()),
         node: profile.node,
+        trigger: profile.cron ? 'timer' : 'scm',
         url: '#',
       };
       if (overlaps(build, window)) builds.push(build);
@@ -109,13 +134,13 @@ function generateBuilds(profile: DemoJobProfile, window: TimeWindow, now: number
 }
 
 function launchesInHour(profile: DemoJobProfile, hourStart: number, random: () => number): number[] {
-  const date = new Date(hourStart);
-  const hour = date.getHours();
-  const isWeekend = weekdayOf(hourStart) >= 5;
-  if (isWeekend && !profile.weekendToo) return [];
+  const hour = new Date(hourStart).getHours();
+  if (!runsOn(profile.days ?? 'workdays', weekdayOf(hourStart))) return [];
 
   if (profile.scheduledHours) {
-    return profile.scheduledHours.includes(hour) ? [hourStart + random() * 5 * MINUTE] : [];
+    // Comme Jenkins avec « H » : une minute fixe propre au job, à quelques secondes près.
+    const minute = stableHash(profile.name) % 60;
+    return profile.scheduledHours.includes(hour) ? [hourStart + minute * MINUTE + random() * 40_000] : [];
   }
 
   const isWorkingHour = hour >= WORKDAY_HOURS.from && hour < WORKDAY_HOURS.to;
@@ -124,6 +149,12 @@ function launchesInHour(profile: DemoJobProfile, hourStart: number, random: () =
   const expected = (profile.commitsPerHour ?? 0) * lunchDip;
   const count = Math.floor(expected + random());
   return Array.from({ length: count }, () => hourStart + random() * HOUR);
+}
+
+function runsOn(days: DemoDays, weekday: number): boolean {
+  if (days === 'all') return true;
+  if (days === 'workdays') return weekday < 5;
+  return days.includes(weekday);
 }
 
 function pickResult(failureRate: number, draw: number): Build['result'] {

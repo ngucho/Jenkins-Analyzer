@@ -21,14 +21,25 @@ les champs listés. Sans lui, l'API renvoie des réponses très lourdes.
 | --- | --- | --- |
 | 1 | `GET /api/json?tree=jobs[name,url,_class,jobs[…]]` | Toute l'arborescence des jobs en **une** requête, dossiers et multibranch compris (5 niveaux) |
 | 2 | `GET /computer/api/json?tree=computer[displayName,numExecutors,offline,idle]` | Nœuds et exécuteurs (capacité) |
-| 3 | `GET /job/<dossier>/job/<nom>/api/json?tree=builds[number,timestamp,duration,estimatedDuration,result,building,builtOn,url]{0,N}` | Historique d'un job, *N* = « builds max. par job » |
+| 3 | `GET /job/<dossier>/job/<nom>/api/json?tree=builds[number,timestamp,duration,estimatedDuration,result,building,builtOn,url,actions[causes[_class]]]{0,N}` | Historique d'un job (avec la cause de chaque build), *N* = « builds max. par job » |
+| 4 | `GET /job/<dossier>/job/<nom>/config.xml` | Planification du job (*Build periodically*, `triggers { cron }`, Parameterized Scheduler). Uniquement pour les pages de prévision et de planification |
 
-Les requêtes 1 et 2 partent en parallèle. Les requêtes 3 partent ensuite, **4 au maximum en
+Les requêtes 1 et 2 partent en parallèle. Les requêtes 3 (puis 4) partent ensuite, **4 au maximum en
 même temps** (`PARALLEL_REQUESTS` dans `http-jenkins.repository.ts`), pour ne pas surcharger
 Jenkins. L'écran affiche une barre de progression job par job.
 
 Le chemin d'un job est reconstruit à partir des noms (`job/a/job/b/`, noms encodés) plutôt qu'en
 réutilisant l'URL absolue renvoyée par Jenkins : c'est ce qui permet de passer par un proxy.
+
+### Droits nécessaires
+
+| Usage | Droits Jenkins |
+| --- | --- |
+| Tableau de bord | *Overall/Read*, *Job/Read* |
+| Prévisions, Optimisation, Nouveau job | en plus *Job/ExtendedRead* (lecture de `config.xml`) |
+
+Sans *ExtendedRead*, les `config.xml` répondent 403 : les jobs concernés sont signalés et
+prévus d'après leur seul historique.
 
 ## Robustesse
 
@@ -53,6 +64,12 @@ Gérée dans `jenkins-http.client.ts` :
 - `builtOn` vide signifie le contrôleur : il devient `built-in`. Les pipelines n'ont pas ce
   champ : `node` vaut alors `null`.
 - Les résultats inconnus deviennent `UNKNOWN`.
+- La première cause du build donne son déclencheur : `TimerTrigger` → planifié, `SCMTrigger`,
+  indexation de branche ou webhook → commit, `UserIdCause` → utilisateur, `UpstreamCause` → autre
+  job. Les exécutions planifiées sont ainsi séparées de la charge « habituelle » dans les prévisions.
+- Dans `config.xml`, seuls les déclencheurs de planification sont lus (`hudson.triggers.TimerTrigger`
+  et `ParameterizedTimerTrigger`) ; le polling SCM est ignoré, car il ne lance un build qu'en cas
+  de changement.
 
 ## CORS et déploiement
 
@@ -78,7 +95,12 @@ Le fichier `.env` est ignoré par Git (il reste sur votre poste).
 `proxy.conf.mjs` relaie `/jenkins-proxy/*` vers le `JENKINS_URL` défini dans `.env`. Cochez *Passer par le proxy de
 développement* dans les paramètres.
 
-### 2. Reverse proxy en production (recommandé)
+### 2. Version installable avec son lanceur (NAS)
+
+`npm run package` produit un dossier autonome dont le lanceur fait office de proxy : voir
+[Installation pour l'équipe](./deployment.md).
+
+### 3. Reverse proxy en production (recommandé)
 
 Construisez l'application (`npm run build`) et servez `dist/jenkins-workload/browser/` derrière
 le même serveur web que le proxy vers Jenkins. Exemple nginx :
@@ -101,7 +123,7 @@ server {
 
 Cochez la même option dans les paramètres : l'application appellera `/jenkins-proxy/...`.
 
-### 3. Autoriser CORS dans Jenkins
+### 4. Autoriser CORS dans Jenkins
 
 Installez un plugin de filtre CORS et autorisez l'origine de l'application, les en-têtes
 `Authorization` et `Accept`, et exposez l'en-tête `X-Jenkins` (pour afficher la version).

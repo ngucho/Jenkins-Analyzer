@@ -23,7 +23,10 @@ de l'historique des builds, exposé par l'API REST de Jenkins.
   - *Durée de maintenance* (2 h) : taille du créneau recherché.
   - *Builds max. par job* (300) : borne la taille des requêtes.
 
-Les paramètres sont enregistrés dans le `localStorage` du navigateur.
+- *Historique des prévisions* (28 jours) : période apprise par les prévisions et la planification.
+
+Les paramètres sont enregistrés dans le `localStorage` du navigateur. Une équipe peut proposer
+des réglages par défaut via `app-config.json` (voir [Installation](./deployment.md)).
 
 ### Tableau de bord
 
@@ -45,6 +48,19 @@ Interactions :
 - **Cliquer sur un build** l'ouvre dans Jenkins.
 - **Cliquer sur une plage creuse** zoome dessus.
 - **Cliquer sur un job** filtre tout le tableau de bord sur ce job.
+
+### Prévisions, Optimisation, Nouveau job
+
+Trois pages d'anticipation, décrites en détail dans [Prévisions et planification](./planning.md) :
+
+| Page | Ce qu'elle apporte |
+| --- | --- |
+| **Prévisions** | Charge attendue sur 1 à 7 jours, fourchette probable, fenêtres calmes, risques de saturation, fiabilité mesurée |
+| **Optimisation** | Décalages des jobs planifiés pour lisser la semaine, avant/après, crons à copier, jobs verrouillables |
+| **Nouveau job** | 5 meilleurs créneaux pour un job à ajouter (récurrent ou ponctuel), avec le cron |
+
+Elles s'appuient sur un historique long et sur la planification (cron) de chaque job, lue dans
+Jenkins. Rien n'est jamais modifié dans Jenkins : les propositions sont à appliquer à la main.
 
 ## Définitions des indicateurs
 
@@ -84,3 +100,5 @@ suggestion est fiable : utilisez 14 ou 30 jours pour décider.
   l'ensemble de l'instance, pas agent par agent.
 - Pas de temps d'attente en file (*queue*), pas d'alerting, pas d'historique stocké côté
   application. Voir les pistes dans le [guide de développement](./development.md#pistes-dévolution).
+- Les prévisions et la planification ont leurs propres limites (fuseau horaire, `H` de Jenkins,
+  jobs enchaînés…) : voir [Prévisions et planification](./planning.md#limites-à-connaître).

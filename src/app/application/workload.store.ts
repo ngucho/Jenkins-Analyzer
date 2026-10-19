@@ -127,7 +127,7 @@ export class WorkloadStore {
     } else if (event.type === 'progress') {
       this.loadState.set({ status: 'loading', completed: event.completed, total: event.total });
     } else {
-      this.snapshotState.set(event.snapshot);
+      this.snapshotState.set(event.result);
       this.zoom.set(null);
       this.loadState.set({ status: 'idle' });
     }

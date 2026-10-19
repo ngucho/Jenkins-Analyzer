@@ -26,7 +26,9 @@ Lisez d'abord l'[architecture](./architecture.md).
 | Une nouvelle source de données | Un adaptateur dans `infrastructure/` qui étend `JenkinsRepository` |
 | Un nouvel état d'écran (filtre, option) | `application/workload.store.ts` |
 | Un nouveau paramètre utilisateur | `core/domain/jenkins-settings.ts` + formulaire `presentation/pages/settings/` |
-| Un nouvel élément visuel | `presentation/components/` |
+| Un calcul de prévision ou de planification | `core/domain/planning/` + son test |
+| Une nouvelle page de planification | Un store dans `application/` qui s'appuie sur `PlanningStore`, une page dans `presentation/pages/` |
+| Un nouvel élément visuel | `presentation/components/` (`TimeSeriesChart` et `StatGrid` sont génériques) |
 
 ## Recettes
 
@@ -61,6 +63,22 @@ Le store n'a pas à changer : `analysis` est déjà un signal calculé.
 Ni le domaine, ni les stores, ni les composants du tableau de bord ne changent.
 *(Si les sources se multiplient, renommer le port en `CiRepository` serait plus juste.)*
 
+### Ajouter une contrainte à l'optimisation (ex. plage horaire interdite)
+
+1. **Domaine** — dans `schedule-optimizer.ts`, ajoutez le champ à `OptimizationInput` et filtrez
+   les décalages dans `scoreOf` (retourner `Infinity` rend un décalage impossible).
+2. **Test** — un cas dans `planning.spec.ts` qui vérifie que la proposition respecte la contrainte.
+3. **Application** — un signal dans `optimization.store.ts`, transmis à `optimizeSchedules`.
+4. **Présentation** — le contrôle dans `optimize.page.html`.
+
+Le calcul est refait automatiquement à chaque changement (signal calculé).
+
+### Changer le modèle de prévision
+
+Toute la prévision passe par `forecastLoad(profile, jobs, window)` (`forecast.ts`). Pour essayer
+un autre modèle (tendance, jours fériés…), gardez cette signature : les trois pages en profitent
+sans changement, et `backtestForecast` mesure immédiatement si c'est mieux.
+
 ### Ajouter un paramètre utilisateur
 
 1. Ajoutez le champ à `JenkinsSettings` et à `DEFAULT_SETTINGS`. Les anciens paramètres
@@ -68,6 +86,8 @@ Ni le domaine, ni les stores, ni les composants du tableau de bord ne changent.
    (`local-storage-settings.repository.ts`).
 2. Ajoutez le contrôle au formulaire (`settings.page.ts`) et le champ dans le template.
 3. Lisez-le dans le store via `this.settingsStore.settings()`.
+4. Il devient automatiquement réglable par l'équipe dans `app-config.json` (`settings-sanitizer.ts`
+   accepte tout champ de `DEFAULT_SETTINGS`, s'il a le bon type).
 
 ## Tests
 
@@ -80,7 +100,11 @@ Les tests couvrent ce qui contient de la logique :
 - `core/domain/analytics/*.spec.ts` — les calculs (plages creuses, charge, heatmap,
   maintenance, statistiques) ;
 - `infrastructure/jenkins/jenkins.mapper.spec.ts` — la conversion des réponses Jenkins ;
-- `presentation/shared/format.spec.ts` — le formatage des durées.
+- `presentation/shared/format.spec.ts` — le formatage des durées ;
+- `core/domain/planning/*.spec.ts` — cron Jenkins, profil hebdomadaire, prévision, optimisation,
+  recherche de créneau ;
+- `infrastructure/jenkins/jenkins-config.parser.spec.ts` et `storage/settings-sanitizer.spec.ts`
+  — lecture des `config.xml` et des réglages d'équipe.
 
 Bonne pratique : construisez les dates de test avec des heures simples
 (`const at = (h: number) => h * HOUR`) pour que les attentes restent lisibles.
@@ -96,7 +120,7 @@ port 8080, puis `JENKINS_URL=http://localhost:8080` dans `.env` (c'est aussi la 
 
 ## Avant de pousser
 
-- [ ] `npm run build` passe sans erreur
+- [ ] `npm run build` passe sans erreur (et `npm run package` si vous touchez au lanceur)
 - [ ] `npm run test:ci` est vert
 - [ ] Le mode démo s'affiche correctement, en thème clair et sombre
 - [ ] Aucun import d'Angular ou de RxJS dans `core/domain`
@@ -112,7 +136,8 @@ Classées de la plus simple à la plus ambitieuse :
 4. **Temps d'attente en file** : l'API `/queue/api/json` permet de mesurer quand les jobs
    attendent un exécuteur libre — le meilleur signal de saturation.
 5. **Comparaison de périodes** (cette semaine vs la précédente).
-6. **Planification assistée** : proposer pour un job lourd le créneau le plus libre de la
-   semaine type.
-7. **Historique long** : Jenkins purge ses builds ; un petit backend qui archive les snapshots
+6. **Contraintes d'enchaînement** dans l'optimisation (« B après A ») et plages interdites.
+7. **Jours fériés et congés** dans les prévisions (aujourd'hui, un jour férié est prévu comme un
+   jour ouvré ordinaire).
+8. **Historique long** : Jenkins purge ses builds ; un petit backend qui archive les snapshots
    permettrait d'analyser plusieurs mois.

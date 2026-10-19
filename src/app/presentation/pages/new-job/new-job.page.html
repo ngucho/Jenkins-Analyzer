@@ -1,0 +1,131 @@
+<header class="page-header">
+  <div>
+    <h1>Planifier un nouveau job</h1>
+    <p class="subtitle">
+      Décrivez le job à ajouter : l’outil cherche les créneaux où il gênera le moins, compte tenu des habitudes
+      de la machine et des jobs déjà planifiés.
+    </p>
+  </div>
+</header>
+
+<app-planning-status />
+
+@if (planning.ready()) {
+  <div class="columns wide-left">
+    <section class="card">
+      <header class="card-header"><div><h2>Le nouveau job</h2></div></header>
+      <form [formGroup]="form" class="job-form">
+        <label class="field">
+          <span>Durée estimée</span>
+          <div class="with-unit"><input type="number" formControlName="durationMinutes" min="1" /> min</div>
+        </label>
+
+        <label class="field">
+          <span>Fréquence</span>
+          <select formControlName="kind">
+            @for (r of recurrences; track r.kind) {
+              <option [value]="r.kind">{{ r.label }}</option>
+            }
+          </select>
+        </label>
+
+        @if (kind() === 'weekly') {
+          <label class="field">
+            <span>Jour</span>
+            <select formControlName="weekday">
+              @for (day of weekdays; track $index) {
+                <option [value]="$index">{{ day }}</option>
+              }
+            </select>
+          </label>
+        }
+
+        @if (kind() === 'every-hours') {
+          <label class="field">
+            <span>Toutes les</span>
+            <select formControlName="everyHours">
+              @for (n of everyHours; track n) {
+                <option [value]="n">{{ n }} heures</option>
+              }
+            </select>
+          </label>
+        } @else {
+          <div class="field">
+            <span>Démarrage autorisé</span>
+            <div class="range">
+              de
+              <select formControlName="from" aria-label="Heure de début autorisée">
+                @for (h of hours; track h.value) {
+                  <option [value]="h.value">{{ h.label }}</option>
+                }
+              </select>
+              à
+              <select formControlName="to" aria-label="Heure de fin autorisée">
+                @for (h of hours; track h.value) {
+                  <option [value]="h.value">{{ h.label }}</option>
+                }
+              </select>
+            </div>
+            <small class="muted">Identiques = toute la journée. La plage peut passer minuit (ex. 22:00 → 06:00).</small>
+          </div>
+        }
+      </form>
+    </section>
+
+    <section class="card">
+      <header class="card-header">
+        <div>
+          <h2>Créneaux recommandés</h2>
+          <p class="card-hint">
+            Du meilleur au moins bon · capacité : {{ planning.capacity() }} exécuteurs
+          </p>
+        </div>
+      </header>
+      @if (results().length > 0) {
+        <ol class="suggestions">
+          @for (result of results(); track result.key) {
+            <li [class.best]="result.best">
+              <div class="when">
+                @if (result.best) {
+                  <span class="tag">Recommandé</span>
+                }
+                <span class="strong">{{ result.label }}</span>
+              </div>
+              <div class="figures muted">
+                Charge déjà présente : {{ result.existing }} · pic avec le job :
+                <span [class.tone-danger]="result.saturates">{{ result.peak }}</span>
+              </div>
+              @if (result.cron) {
+                <app-copy-button [text]="result.cron" />
+              }
+            </li>
+          }
+        </ol>
+        <p class="note">
+          Pour une exécution ponctuelle, lancez le job à la main à l’heure indiquée. Pour un job récurrent, collez le
+          cron dans « Build periodically » ou dans <code>triggers {{ '{' }} cron('…') {{ '}' }}</code>.
+        </p>
+      } @else {
+        <p class="empty">Aucun créneau possible avec ces contraintes : élargissez la plage horaire.</p>
+      }
+    </section>
+  </div>
+
+  <section class="card">
+    <header class="card-header">
+      <div>
+        <h2>{{ preview().title }}</h2>
+        <p class="card-hint">Charge actuelle et emplacement du créneau recommandé (en vert)</p>
+      </div>
+    </header>
+    <app-time-series-chart
+      [window]="preview().window"
+      [slotStart]="preview().window.start"
+      [slotSize]="slotSize"
+      [series]="preview().series"
+      [bars]="preview().bars"
+      [capacity]="planning.capacity()"
+      [tickFormat]="preview().tickFormat"
+    />
+  </section>
+}
